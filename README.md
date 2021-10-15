@@ -8,6 +8,6 @@
 
 ## ブランチ
 - master: 本の内容をそのまま実装したブランチ  
-- other_login: gmailログイン、twitterログイン機能を実装したブランチ
+- add_other_authentications: googleログイン、twitterログイン機能を実装したブランチ
 
 
