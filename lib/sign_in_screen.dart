@@ -84,7 +84,6 @@ class _SignInScreenState extends State<SignInScreen> {
         'https://www.googleapis.com/auth/contacts.readonly',
       ]);
 
-
       GoogleSignInAccount? signinAccount = await googleLogin.signIn();
       if (signinAccount == null) return;
 
@@ -122,6 +121,7 @@ class _SignInScreenState extends State<SignInScreen> {
       );
       final authResult = await twitterLogin.login();
       if (authResult.status != TwitterLoginStatus.loggedIn) {
+        print("cannot fetch auth data from twitter");
         return;
       }
 
@@ -131,6 +131,29 @@ class _SignInScreenState extends State<SignInScreen> {
       );
 
       FirebaseAuth.instance.signInWithCredential(credential);
+
+      Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => PhotoListScreen(),
+          )
+      );
+    } catch(e) {
+      await showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text('エラー'),
+              content: Text(e.toString()),
+            );
+          }
+      );
+    }
+  }
+
+  Future<void> _onSignInWithAnonymousUser() async {
+    final FirebaseAuth firebaseAuth = FirebaseAuth.instance;
+    try{
+      await firebaseAuth.signInAnonymously();
 
       Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -218,6 +241,14 @@ class _SignInScreenState extends State<SignInScreen> {
                   onPressed: () {
                     _onSignInWithTwitter();
                   },
+                ),
+                SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => _onSignInWithAnonymousUser(),
+                    child: Text('登録せず利用'),
+                  ),
                 ),
               ],
             ),
