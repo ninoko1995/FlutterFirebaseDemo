@@ -19,6 +19,7 @@ class PhotoListScreen extends StatefulWidget {
 
 class _PhotoListScreenState extends State<PhotoListScreen> {
   late PageController _controller;
+  late User? currentUser = FirebaseAuth.instance.currentUser;
 
   @override
   void initState() {
@@ -58,9 +59,20 @@ class _PhotoListScreenState extends State<PhotoListScreen> {
   Future<void> _onSignOut() async {
     await FirebaseAuth.instance.signOut();
 
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => SignInScreen()),
     );
+  }
+
+  Future<void> _onAddUser() async {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => SignInScreen()),
+    ).then((value) {
+        setState(() {
+          currentUser = FirebaseAuth.instance.currentUser;
+        });
+    });
   }
 
   Future<void> _onAddPhoto() async {
@@ -85,13 +97,15 @@ class _PhotoListScreenState extends State<PhotoListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isAnonymous = currentUser != null && currentUser!.isAnonymous;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Photo App'),
         actions: [
           IconButton(
-            onPressed: () => _onSignOut(),
-            icon: Icon(Icons.exit_to_app),
+            onPressed: () => isAnonymous ? _onAddUser() : _onSignOut(),
+            icon: Icon(isAnonymous ? Icons.person_add_alt_1 : Icons.exit_to_app),
           ),
         ],
       ),

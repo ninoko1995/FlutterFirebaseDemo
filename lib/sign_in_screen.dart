@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:twitter_login/twitter_login.dart';
 import 'package:flutter_signin_button/flutter_signin_button.dart';
 
+import 'package:photoapp/providers.dart';
 import 'package:photoapp/credentials.dart';
 import 'package:photoapp/photo_list_screen.dart';
 
@@ -19,7 +21,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  Future<void> _onSignIn() async {
+  Future<void> _onSignIn(User? user) async {
     try {
       if (_formKey.currentState?.validate() != true) {
         return;
@@ -27,14 +29,24 @@ class _SignInScreenState extends State<SignInScreen> {
 
       final String email = _emailController.text;
       final String password = _passwordController.text;
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: email, password: password);
+      final AuthCredential credential = EmailAuthProvider.credential(email: email, password: password);
+      if (user !=null && user.isAnonymous) {
+        await user.linkWithCredential(credential);
+        Navigator.of(context).pop();
+      } else {
+        await FirebaseAuth.instance.signInWithCredential(credential);
 
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => PhotoListScreen(),
-        ),
-      );
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => PhotoListScreen(),
+            ),
+          );
+        }
+      }
+
     } catch (e) {
       await showDialog(
           context: context,
@@ -77,7 +89,7 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
-  Future<void> _onSignInWithGoogle() async {
+  Future<void> _onSignInWithGoogle(User? user) async {
     try{
       final googleLogin = GoogleSignIn(scopes: [
         'email',
@@ -92,13 +104,23 @@ class _SignInScreenState extends State<SignInScreen> {
         idToken: auth.idToken,
         accessToken: auth.accessToken,
       );
-      FirebaseAuth.instance.signInWithCredential(credential);
 
-      Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => PhotoListScreen(),
-          )
-      );
+      if (user !=null && user.isAnonymous) {
+        await user.linkWithCredential(credential);
+        Navigator.of(context).pop();
+      } else {
+        await FirebaseAuth.instance.signInWithCredential(credential);
+
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => PhotoListScreen(),
+            ),
+          );
+        }
+      }
     } catch(e) {
       await showDialog(
           context: context,
@@ -112,7 +134,7 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
-  Future<void> _onSignInWithTwitter() async {
+  Future<void> _onSignInWithTwitter(User? user) async {
     try{
       final twitterLogin = TwitterLogin(
         apiKey: apiKey,
@@ -130,13 +152,22 @@ class _SignInScreenState extends State<SignInScreen> {
         secret: authResult.authTokenSecret!,
       );
 
-      FirebaseAuth.instance.signInWithCredential(credential);
+      if (user !=null && user.isAnonymous) {
+        await user.linkWithCredential(credential);
+        Navigator.of(context).pop();
+      } else {
+        await FirebaseAuth.instance.signInWithCredential(credential);
 
-      Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => PhotoListScreen(),
-          )
-      );
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => PhotoListScreen(),
+            ),
+          );
+        }
+      }
     } catch(e) {
       await showDialog(
           context: context,
@@ -150,16 +181,21 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
-  Future<void> _onSignInWithAnonymousUser() async {
+  Future<void> _onSignInWithAnonymousUser(User? user) async {
     final FirebaseAuth firebaseAuth = FirebaseAuth.instance;
     try{
-      await firebaseAuth.signInAnonymously();
+      if (user !=null && user.isAnonymous) {
+        Navigator.of(context).pop();
 
-      Navigator.of(context).pushReplacement(
+      } else {
+        await firebaseAuth.signInAnonymously();
+
+        Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => PhotoListScreen(),
-          )
-      );
+          ),
+        );
+      }
     } catch(e) {
       await showDialog(
           context: context,
@@ -175,86 +211,100 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Form(
-        key: _formKey, //validation用
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Photo App',
-                  style: Theme.of(context).textTheme.headline4,
-                ),
-                SizedBox(height: 16),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: InputDecoration(labelText: "メールアドレス"),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (String? value) {
-                    if (value?.isEmpty == true) {
-                      return 'メースアドレスを入力してください';
-                    }
-                    return null;
-                  }
-                ),
-                SizedBox(height: 8),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: InputDecoration(labelText: 'パスワード'),
-                  keyboardType: TextInputType.visiblePassword,
-                  obscureText: true,
-                  validator: (String? value) {
-                    if (value?.isEmpty == true) {
-                      return 'パスワードを入力してください';
-                    }
-                    return null;
-                  }
-                ),
-                SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => _onSignIn(),
-                    child: Text('ログイン'),
+    return Consumer(builder: (context, watch, child) {
+      final asyncUser = watch(userProvider);
+      return asyncUser.when(
+        data: (User? user) {
+          final isAnonymous = user != null && user.isAnonymous;
+          return Scaffold(
+            body: Form(
+              key: _formKey, //validation用
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        !isAnonymous ? 'Photo App' : ' アカウントをリンク',
+                        style: !isAnonymous ? Theme.of(context).textTheme.headline4 : Theme.of(context).textTheme.headline5,
+                      ),
+                      SizedBox(height: 16),
+                      TextFormField(
+                          controller: _emailController,
+                          decoration: InputDecoration(labelText: "メールアドレス"),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (String? value) {
+                            if (value?.isEmpty == true) {
+                              return 'メースアドレスを入力してください';
+                            }
+                            return null;
+                          }
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                          controller: _passwordController,
+                          decoration: InputDecoration(labelText: 'パスワード'),
+                          keyboardType: TextInputType.visiblePassword,
+                          obscureText: true,
+                          validator: (String? value) {
+                            if (value?.isEmpty == true) {
+                              return 'パスワードを入力してください';
+                            }
+                            return null;
+                          }
+                      ),
+                      SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => _onSignIn(user),
+                          child: Text(!isAnonymous ? 'ログイン' : 'メールアドレスを追加'),
+                        ),
+                      ),
+                      if (!isAnonymous) SizedBox(height: 8),
+                      if (!isAnonymous) SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => _onSignUp(),
+                          child: Text('新規登録'),
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      SignInButton(
+                        Buttons.Google,
+                        onPressed: () {
+                          _onSignInWithGoogle(user);
+                        },
+                      ),
+                      SignInButton(
+                        Buttons.Twitter,
+                        onPressed: () {
+                          _onSignInWithTwitter(user);
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                            onPressed: () => _onSignInWithAnonymousUser(user),
+                            child: Text(!isAnonymous ? '登録せず利用' : 'キャンセル'),
+                          )
+                      ),
+                    ],
                   ),
                 ),
-                SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => _onSignUp(),
-                    child: Text('新規登録'),
-                  ),
-                ),
-                SizedBox(height: 8),
-                SignInButton(
-                  Buttons.Google,
-                  onPressed: () {
-                    _onSignInWithGoogle();
-                  },
-                ),
-                SignInButton(
-                  Buttons.Twitter,
-                  onPressed: () {
-                    _onSignInWithTwitter();
-                  },
-                ),
-                SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => _onSignInWithAnonymousUser(),
-                    child: Text('登録せず利用'),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
-    );
+          );
+        },
+        loading: () {
+          return Container();
+        },
+        error: (e, stackTrace) {
+          return Container();
+        },
+      );
+    });
   }
 }
