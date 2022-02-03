@@ -185,24 +185,12 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Future<void> _onSignInWithApple(User? user) async {
     try{
-      print("=============================================================");
-      print("start!");
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
       );
-      print("=============================================================");
-      print(appleCredential);
-      print(appleCredential.userIdentifier);
-      print(appleCredential.givenName);
-      print(appleCredential.familyName);
-      print(appleCredential.authorizationCode);
-      print(appleCredential.email);
-      print(appleCredential.identityToken);
-      print(appleCredential.state);
-      
 
       OAuthProvider oauthProvider = OAuthProvider('apple.com');
       final credential = oauthProvider.credential(
