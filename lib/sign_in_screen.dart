@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:twitter_login/twitter_login.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:flutter_signin_button/flutter_signin_button.dart';
 
 import 'package:photoapp/providers.dart';
@@ -147,9 +149,53 @@ class _SignInScreenState extends State<SignInScreen> {
         return;
       }
 
-      final AuthCredential credential = TwitterAuthProvider.credential(
+      AuthCredential credential = TwitterAuthProvider.credential(
         accessToken: authResult.authToken!,
         secret: authResult.authTokenSecret!,
+      );
+
+      if (user !=null && user.isAnonymous) {
+        await user.linkWithCredential(credential);
+        Navigator.of(context).pop();
+      } else {
+        await FirebaseAuth.instance.signInWithCredential(credential);
+
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => PhotoListScreen(),
+            ),
+          );
+        }
+      }
+    } catch(e) {
+      await showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text('エラー'),
+              content: Text(e.toString()),
+            );
+          }
+      );
+    }
+  }
+
+  Future<void> _onSignInWithApple(User? user) async {
+    try{
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      OAuthProvider oauthProvider = OAuthProvider('apple.com');
+      final credential = oauthProvider.credential(
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
       );
 
       if (user !=null && user.isAnonymous) {
@@ -282,6 +328,12 @@ class _SignInScreenState extends State<SignInScreen> {
                         onPressed: () {
                           _onSignInWithTwitter(user);
                         },
+                      ),
+                      if (Platform.isIOS) SignInButton(
+                          Buttons.Apple,
+                          onPressed: () {
+                            _onSignInWithApple(user);
+                          },
                       ),
                       SizedBox(height: 10),
                       SizedBox(

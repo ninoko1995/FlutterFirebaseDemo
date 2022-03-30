@@ -46,6 +46,7 @@ app.*.map.json
 /android/app/release
 
 # added by Developper
+/ios/build/*
 /ios/Runner/GoogleService-Info.plist
 /android/app/google-services.json
 /lib/credentials.dart
